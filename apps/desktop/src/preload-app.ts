@@ -4,6 +4,7 @@ import type { FileSaveResult } from '@deepseek-ai/dsh-client-ui-file-actions/typ
 import type { DesktopShortcutInput, ShortcutConfigSnapshot, ShortcutSaveResult } from '@deepseek-ai/dsh-client-shortcuts/protocol'
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import { DESKTOP_IPC, SCHEME, type DshDesktopProductApi, type DesktopUpdatePresentation } from './ipc.ts'
+import type { DesktopFeedState, DesktopFeedChangeResult } from '@deepseek-ai/dsh-client-ui-settings-general/types'
 import { PLATFORM_IPC } from './platform-ipc.ts'
 import { markDocumentPlatform, syncWindowFullscreen } from './preload-platform.ts'
 import { syncNativeTheme } from './preload-theme.ts'
@@ -65,6 +66,10 @@ function createProductApi(): DshDesktopProductApi {
       },
     },
     updates: {
+      feed: {
+        get: () => ipcRenderer.invoke(DESKTOP_IPC.updatesFeedGet) as Promise<DesktopFeedState>,
+        set: (owner: string) => ipcRenderer.invoke(DESKTOP_IPC.updatesFeedSet, owner) as Promise<DesktopFeedChangeResult>,
+      },
       status: () => ipcRenderer.invoke(DESKTOP_IPC.updatesStatus) as Promise<DesktopUpdatePresentation>,
       open: () => ipcRenderer.invoke(DESKTOP_IPC.updatesOpen) as Promise<void>,
       subscribe(listener) {

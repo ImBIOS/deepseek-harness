@@ -34,7 +34,9 @@ import type { ShortcutCommandId } from '@deepseek-ai/dsh-client-shortcuts/client
 import { createSettingsShellStore } from './shell-store.ts'
 import { SettingsRoot } from './SettingsRoot.tsx'
 import { DesktopUpdateBadge } from './DesktopUpdateIndicator.tsx'
-import type { DesktopUpdateBridge } from '../types.ts'
+import type { DesktopUpdateBridge, DesktopFeedBridge } from '../types.ts'
+import { DesktopFeedSource } from './desktop-feed-source.ts'
+import { DesktopFeedRow } from './DesktopFeedRow.tsx'
 import { DesktopUpdateSource } from './desktop-update-source.ts'
 import { CloseLabel, HeaderContent, TriggerContent } from './chrome.tsx'
 import { GeneralSection } from './GeneralSection.tsx'
@@ -102,6 +104,19 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en, ja, es, fr, de, ru, pt }), 'ui-settings-general: dictionaries')
   const connection = ctx.get('connection') as ConnectionHandle
   const carrier = (globalThis as typeof globalThis & { dshDesktop?: { protocolVersion: number; updates?: DesktopUpdateBridge } }).dshDesktop
+  const carrierUpdates = carrier?.protocolVersion === 1 ? carrier.updates : undefined
+  const feedBridge: DesktopFeedBridge | undefined = carrierUpdates !== undefined && 'feed' in carrierUpdates
+    ? (carrierUpdates as { feed?: DesktopFeedBridge }).feed
+    : undefined
+  if (feedBridge !== undefined) {
+    const feed = new DesktopFeedSource(feedBridge)
+    ctx.slots.inject('settings.general.item', () => ctx.slots.register({
+      name: 'settings.general.item', id: 'desktop-update-feed', order: 94, locale: NS,
+      inject: () => ({ hooks: { feed: feed.store },
+        edit: (input: string) => { feed.edit(input) }, check: () => feed.check(),
+        dismiss: (sequence: number) => { feed.dismissNotice(sequence) } }),
+    }, DesktopFeedRow))
+  }
   const desktopUpdate = new DesktopUpdateSource(carrier?.protocolVersion === 1 ? carrier.updates : undefined)
   ctx.effect(() => () => { desktopUpdate.dispose() }, 'ui-settings-general: desktop update carrier')
   ctx.slots.inject('sidebar.toggle.badge', () => ctx.slots.register({

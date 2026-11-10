@@ -252,7 +252,10 @@ it('keeps a stable-version nightly installation on nightly and rejects prereleas
   expect(nightly.updater.channel).toBe('nightly')
   const latest = fixture('latest', '1.0.0')
   expect(latest.updater.channel).toBe('latest')
-  expect(latest.updater.allowPrerelease).toBe(false)
+  // ForkHub feed: prereleases stay allowed on every channel (the feed
+  // holds ONLY fork builds); the fork-counter gate in doCheck(), not the
+  // channel flag, refuses stock prereleases on latest.
+  expect(latest.updater.allowPrerelease).toBe(true)
   expect(latest.updater.allowDowngrade).toBe(false)
   expect((await latest.coordinator.check()).phase).toBe('error')
   expect(latest.downloadUpdate).not.toHaveBeenCalled()

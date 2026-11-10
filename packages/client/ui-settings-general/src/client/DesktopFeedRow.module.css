@@ -1,0 +1,19 @@
+.row {
+  padding: 16px 0;
+  color: var(--dsw-alias-label-primary);
+  font-size: 14px;
+  line-height: 22px;
+  overflow-wrap: anywhere;
+}
+
+.rowText {
+  margin-bottom: 8px;
+}
+
+.title {
+  font-weight: 600;
+}
+
+.description {
+  opacity: 0.8;
+}

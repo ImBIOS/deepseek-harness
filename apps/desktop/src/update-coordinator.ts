@@ -7,6 +7,8 @@ import electronUpdater, { type AppUpdater, type ProgressInfo, type UpdateInfo } 
 import { gt, valid } from 'semver'
 import type { DesktopUpdateState } from './ipc.ts'
 import { DesktopUpdateHttpExecutor } from './update-http-executor.ts'
+import { getUpdateFeed, type FeedReader } from './updateFeed.ts'
+import { isForkCounterUpgrade, parseForkVersion } from './forkVersion.ts'
 import { DesktopUpdatePreparationError } from './update-error.ts'
 
 const { autoUpdater } = electronUpdater
@@ -56,6 +58,7 @@ export class DesktopUpdateCoordinator {
     private readonly currentVersion: () => string = () => app.getVersion(),
     private readonly downloadResult?: (success: boolean, reason?: string) => void,
     private readonly channel: 'nightly' | 'latest' = 'nightly',
+    private readonly feedReader?: FeedReader,
   ) {
     if (updater === autoUpdater) {
       // electron-updater omits this internal transport property from its public declarations.
@@ -68,8 +71,11 @@ export class DesktopUpdateCoordinator {
     }
     this.updater.autoDownload = false
     this.updater.autoInstallOnAppQuit = false
+    this.applyForkHubFeed()
     this.updater.channel = channel
-    this.updater.allowPrerelease = channel === 'nightly'
+    // Fork feed contains ONLY fork prereleases; always allow them here —
+    // the fork-counter gate in doCheck(), not the channel flag, decides.
+    this.updater.allowPrerelease = true
     // Selecting a channel can enable downgrade in electron-updater.
     this.updater.allowDowngrade = false
     this.updater.on('download-progress', this.onProgress)
@@ -79,6 +85,24 @@ export class DesktopUpdateCoordinator {
 
   /** Latest observable state; complete download identity remains main-process-owned. */
   get state(): DesktopUpdateState { return this.current }
+
+  /** Live ForkHub feed this coordinator polls (single source: getUpdateFeed). */
+  get feed(): { owner: string; repo: string } { return getUpdateFeed(this.feedReader) }
+
+  /**
+   * Repoint the live updater at the ForkHub catalog feed. Fork builds
+   * carry owner-stamped versions; the feed contains ONLY fork builds, so
+   * no stock prerelease can leak in and stock↔fork pairs stay refused by
+   * the version gate. Upstream has no `.forkhub` repo, so a stock build's
+   * feed can never serve a fork build.
+   */
+  applyForkHubFeed(): void {
+    const feed = getUpdateFeed(this.feedReader)
+    if (typeof this.updater.setFeedURL === 'function') {
+      this.updater.setFeedURL({ provider: 'github', owner: feed.owner, repo: feed.repo })
+    }
+    this.updater.allowPrerelease = true
+  }
 
   /**
    * Check metadata without downloading, joining any current check.
@@ -189,8 +213,17 @@ export class DesktopUpdateCoordinator {
       if (result === null) throw new Error('desktop update: no check result was returned')
       const version = result.updateInfo.version
       if (valid(version) === null) throw new Error('desktop update: feed version is invalid')
-      if (this.channel === 'latest' && version.includes('-')) throw new Error('desktop update: latest feed contains a prerelease')
-      this.candidate = result.isUpdateAvailable && gt(version, this.currentVersion()) ? version : undefined
+      if (this.channel === 'latest' && version.includes('-') && parseForkVersion(version) === null) {
+        throw new Error('desktop update: latest feed contains a prerelease')
+      }
+      // ForkHub rebuild gate: an owner-stamped fork build installs only
+      // over a same-owner, same-date, lower-counter build; stock<->fork
+      // and cross-owner pairs refuse. Stock pairs use semver.
+      const current = this.currentVersion()
+      const forkUpgrade = isForkCounterUpgrade(current, version)
+      const stockUpgrade = parseForkVersion(current) === null
+        && parseForkVersion(version) === null && gt(version, current)
+      this.candidate = result.isUpdateAvailable && (forkUpgrade || stockUpgrade) ? version : undefined
       return this.setState(this.candidate === undefined ? { phase: 'idle' } : { phase: 'available', version })
     } catch (error) {
       return this.failure(error, 'check')

@@ -28,6 +28,34 @@ export interface DesktopUpdateBridge {
   subscribe(listener: (state: DesktopUpdatePresentation) => void): () => void
 }
 
+/** ForkHub publisher feed exposed through the isolated preload. */
+export interface DesktopFeedState {
+  readonly owner: string
+  readonly repo: string
+  readonly releases?: number
+}
+
+/** Outcome of one publisher Check; failures persist nothing. */
+export type DesktopFeedChangeResult =
+  | { readonly kind: 'applied'; readonly state: DesktopFeedState; readonly releases: number; readonly message: string }
+  | { readonly kind: 'failed'; readonly state: DesktopFeedState; readonly message: string }
+
+/** Shell-owned publisher catalog behind the Settings → Version row. */
+export interface DesktopFeedBridge {
+  /** @returns Current feed owner; resolved from the same single source as the updater. */
+  get(): Promise<DesktopFeedState>
+  /**
+   * @param owner - Publisher to validate (public {owner}/.forkhub with ≥1 published release).
+   * @returns Validation success persists the owner, repoints the live feed, and checks immediately.
+   */
+  set(owner: string): Promise<DesktopFeedChangeResult>
+}
+
+/** Optional carrier API; it cannot select artifacts or authorize installation. */
+export interface DesktopUpdateBridgeWithFeed extends DesktopUpdateBridge {
+  readonly feed: DesktopFeedBridge
+}
+
 /** Shared carrier status for the account row and collapsed sidebar badge. */
 export interface DesktopUpdateView {
   readonly presentation?: DesktopUpdatePresentation

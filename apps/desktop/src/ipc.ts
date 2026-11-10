@@ -1,4 +1,5 @@
 import type { DesktopFileActions } from '@deepseek-ai/dsh-client-ui-file-actions/types'
+import type { DesktopFeedBridge } from '@deepseek-ai/dsh-client-ui-settings-general/types'
 /** Typed preload operations exposed only by the Electron shell. */
 
 import type { DesktopKeyboardApi, DesktopShortcutsApi } from '@deepseek-ai/dsh-client-shortcuts/protocol'
@@ -35,6 +36,8 @@ export const DESKTOP_IPC = {
   updatesStatus: 'dsh-desktop:updates-status',
   updatesOpen: 'dsh-desktop:updates-open',
   updatesPresentation: 'dsh-desktop:updates-presentation',
+  updatesFeedGet: 'dsh-desktop:updates-feed-get',
+  updatesFeedSet: 'dsh-desktop:updates-feed-set',
   nativeThemeSet: 'dsh-desktop:native-theme-set',
   windowFullscreen: 'dsh-desktop:window-fullscreen',
   windowsAppearance: 'dsh-desktop:windows-appearance',
@@ -91,6 +94,7 @@ export interface DshDesktopProductApi {
    */
   deviceInfo(): Promise<string>
   readonly updates: {
+    readonly feed: DesktopFeedBridge
     status(): Promise<DesktopUpdatePresentation>
     open(): Promise<void>
     subscribe(listener: (state: DesktopUpdatePresentation) => void): () => void

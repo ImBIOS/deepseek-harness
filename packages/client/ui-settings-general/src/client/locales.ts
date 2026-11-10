@@ -44,6 +44,12 @@ export const zh = {
   'hostRelease.unknown': '未解析',
   'hostRelease.reload': '刷新以加载新版本',
   'hostRelease.later': '暂不刷新',
+  'desktop.feed.title': 'ForkHub 发布者',
+  'desktop.feed.description': '输入发布更新的 GitHub 用户名或组织点击检查后验证其目录并切换更新源。',
+  'desktop.feed.check': '检查',
+  'desktop.feed.current': '当前更新源：{owner}/.forkhub',
+  'desktop.feed.unavailable': '无法读取更新源请重启应用。',
+  'desktop.feed.dismiss': '关闭',
 } satisfies Record<string, string>
 
 /** The settings namespace key union. */
@@ -93,6 +99,12 @@ export const en = {
   'hostRelease.unknown': 'Unknown',
   'hostRelease.reload': 'Reload to load the new version',
   'hostRelease.later': 'Not now',
+  'desktop.feed.title': 'ForkHub publisher',
+  'desktop.feed.description': 'Type the GitHub user or org whose catalog the app updates from. Check validates the catalog, then switches the feed.',
+  'desktop.feed.check': 'Check',
+  'desktop.feed.current': 'Current feed: {owner}/.forkhub',
+  'desktop.feed.unavailable': 'Could not read the update feed. Restart the app.',
+  'desktop.feed.dismiss': 'Dismiss',
 } satisfies Record<SettingsKey, string>
 
 /** Japanese copy, checked against the English keys. */
@@ -139,6 +151,12 @@ export const ja = {
   'hostRelease.unknown': '不明',
   'hostRelease.reload': '再読み込みして新しいバージョンを読み込む',
   'hostRelease.later': '後で',
+  'desktop.feed.title': 'ForkHub パブリッシャー',
+  'desktop.feed.description': '更新元の GitHub ユーザーまたは組織を入力します。チェックでカタログを検証してフィードを切り替えます。',
+  'desktop.feed.check': 'チェック',
+  'desktop.feed.current': '現在のフィード: {owner}/.forkhub',
+  'desktop.feed.unavailable': '更新フィードを読み取れません。アプリを再起動してください。',
+  'desktop.feed.dismiss': '閉じる',
 } satisfies Record<keyof typeof en, string>
 
 /** Spanish dictionary, checked against the English keys. */
@@ -185,6 +203,12 @@ export const es = {
   'hostRelease.unknown': 'Desconocido',
   'hostRelease.reload': 'Recargar para cargar la nueva versión.',
   'hostRelease.later': 'Ahora no',
+  'desktop.feed.title': 'Editor de ForkHub',
+  'desktop.feed.description': 'Escribe el usuario u organización de GitHub cuyo catálogo sigue la app. Comprobar valida el catálogo y cambia el feed.',
+  'desktop.feed.check': 'Comprobar',
+  'desktop.feed.current': 'Feed actual: {owner}/.forkhub',
+  'desktop.feed.unavailable': 'No se pudo leer el feed de actualizaciones. Reinicia la app.',
+  'desktop.feed.dismiss': 'Descartar',
 } satisfies Record<keyof typeof en, string>
 
 /** French dictionary, checked against the English keys. */
@@ -231,6 +255,12 @@ export const fr = {
   'hostRelease.unknown': 'Inconnu',
   'hostRelease.reload': 'Recharger pour charger la nouvelle version',
   'hostRelease.later': 'Pas maintenant',
+  'desktop.feed.title': 'Éditeur ForkHub',
+  'desktop.feed.description': 'Saisissez l’utilisateur ou l’organisation GitHub dont la app suit le catalogue. Vérifier valide le catalogue puis change le flux.',
+  'desktop.feed.check': 'Vérifier',
+  'desktop.feed.current': 'Flux actuel : {owner}/.forkhub',
+  'desktop.feed.unavailable': 'Impossible de lire le flux de mise à jour. Redémarrez l’app.',
+  'desktop.feed.dismiss': 'Ignorer',
 } satisfies Record<keyof typeof en, string>
 
 /** German dictionary, checked against the English keys. */
@@ -277,6 +307,12 @@ export const de = {
   'hostRelease.unknown': 'Unbekannt',
   'hostRelease.reload': 'Neu laden, um die neue Version zu laden',
   'hostRelease.later': 'Nicht jetzt',
+  'desktop.feed.title': 'ForkHub-Herausgeber',
+  'desktop.feed.description': 'Gib den GitHub-Benutzer oder die Organisation ein, deren Katalog die App verfolgt. Prüfen validiert den Katalog und wechselt den Feed.',
+  'desktop.feed.check': 'Prüfen',
+  'desktop.feed.current': 'Aktueller Feed: {owner}/.forkhub',
+  'desktop.feed.unavailable': 'Update-Feed konnte nicht gelesen werden. Starte die App neu.',
+  'desktop.feed.dismiss': 'Schließen',
 } satisfies Record<keyof typeof en, string>
 
 /** Russian dictionary, checked against the English keys. */
@@ -323,6 +359,12 @@ export const ru = {
   'hostRelease.unknown': 'Неизвестно',
   'hostRelease.reload': 'Перезагрузите, чтобы загрузить новую версию',
   'hostRelease.later': 'Не сейчас',
+  'desktop.feed.title': 'Издатель ForkHub',
+  'desktop.feed.description': 'Введите пользователя или организацию GitHub, чей каталог отслеживает приложение. Проверка валидирует каталог и переключает ленту.',
+  'desktop.feed.check': 'Проверить',
+  'desktop.feed.current': 'Текущая лента: {owner}/.forkhub',
+  'desktop.feed.unavailable': 'Не удалось прочитать ленту обновлений. Перезапустите приложение.',
+  'desktop.feed.dismiss': 'Закрыть',
 } satisfies Record<keyof typeof en, string>
 
 /** Portuguese dictionary, checked against the English keys. */
@@ -369,4 +411,10 @@ export const pt = {
   'hostRelease.unknown': 'Desconhecido',
   'hostRelease.reload': 'Recarregue para carregar a nova versão',
   'hostRelease.later': 'Agora não',
+  'desktop.feed.title': 'Editor do ForkHub',
+  'desktop.feed.description': 'Digite o usuário ou organização do GitHub cujo catálogo o app acompanha. Verificar valida o catálogo e troca o feed.',
+  'desktop.feed.check': 'Verificar',
+  'desktop.feed.current': 'Feed atual: {owner}/.forkhub',
+  'desktop.feed.unavailable': 'Não foi possível ler o feed de atualização. Reinicie o app.',
+  'desktop.feed.dismiss': 'Dispensar',
 } satisfies Record<keyof typeof en, string>

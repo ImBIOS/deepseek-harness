@@ -30,6 +30,9 @@
       "path": "../../packages/client/shortcuts/tsconfig.host.json"
     },
     {
+      "path": "../../packages/client/ui-settings-general/tsconfig.host.json"
+    },
+    {
       "path": "../../packages/util/atomic-write"
     },
     {
