@@ -96,7 +96,13 @@ export function createElectronBuilderConfig(
   if (windowsSigner !== undefined) {
     installWindowsNsisBootstrapSigner({ sign: windowsSigner })
   }
-  const update = unsigned ? undefined : resolveDesktopAutoUpdateConfig(env, resolvedPlatform, resolvedArch)
+  // ForkHub catalog builds (DSH_UPDATE_OWNER set by the catalog build.sh)
+  // always carry an update feed — even unsigned: the feed is a GitHub
+  // releases catalog, not the COS deployment, so no upload credentials
+  // or signing are involved. Stock unsigned local builds keep update
+  // undefined (no feed), exactly as before.
+  const forkhubOwner = unsigned ? process.env.DSH_UPDATE_OWNER?.trim() || undefined : undefined
+  const update = !unsigned ? resolveDesktopAutoUpdateConfig(env, resolvedPlatform, resolvedArch) : undefined
   if (preparedRuntime !== undefined) buildPaths.dsh = preparedRuntime
   // electron-builder merges extraMetadata into the packaged manifest, so a build version here reaches
   // the artifact names, the update feed, and the installed app.getVersion() the updater compares against.
@@ -272,6 +278,8 @@ export function createElectronBuilderConfig(
       differentialPackage: true,
     },
     detectUpdateChannel: false,
-    publish: update === undefined ? null : [{ provider: 'generic', url: update.publicUrl, channel: update.channel }],
+    publish: forkhubOwner !== undefined
+      ? [{ provider: 'github', owner: forkhubOwner, repo: '.forkhub', channel: 'latest' }]
+      : update === undefined ? null : [{ provider: 'generic', url: update.publicUrl, channel: update.channel }],
   }
 }
