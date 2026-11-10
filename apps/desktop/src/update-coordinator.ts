@@ -9,6 +9,8 @@ import type { DesktopUpdateState } from './ipc.ts'
 import { DesktopUpdateHttpExecutor } from './updates/electron-updater/http-executor.ts'
 import { DesktopUpdatePreparationError, downloadFailureDetails } from './update-error.ts'
 import type { DesktopUpdateChannel } from './update-channel.ts'
+import { getUpdateFeed, type ForkHubFeed, type FeedReader } from './updateFeed.ts'
+import { isForkCounterUpgrade, parseForkVersion } from './forkVersion.ts'
 import { selectUpdateChannel } from './updates/electron-updater/channel.ts'
 import { discardDesktopUpdate } from './updates/electron-updater/discard.ts'
 
@@ -66,6 +68,7 @@ export class DesktopUpdateCoordinator {
     private readonly downloadResult?: (success: boolean, reason?: string) => void,
     private channel: DesktopUpdateChannel = 'nightly',
     private readonly discard: (updater: AppUpdater) => Promise<void> = discardDesktopUpdate,
+    private readonly feedReader?: FeedReader,
   ) {
     if (updater === autoUpdater) {
       // electron-updater omits this internal transport property from its public declarations.
@@ -78,6 +81,7 @@ export class DesktopUpdateCoordinator {
     }
     this.updater.autoDownload = false
     this.updater.autoInstallOnAppQuit = false
+    this.applyForkHubFeed()
     selectUpdateChannel(this.updater, channel)
     this.updater.on('download-progress', this.onProgress)
     this.updater.on('update-downloaded', this.onDownloaded)
@@ -92,6 +96,24 @@ export class DesktopUpdateCoordinator {
 
   /** Selected runtime channel, including while a new feed is being checked. */
   get selectedChannel(): DesktopUpdateChannel { return this.channel }
+
+  /** Live ForkHub feed this coordinator polls (single source: getUpdateFeed). */
+  get feed(): ForkHubFeed { return getUpdateFeed(this.feedReader) }
+
+  /**
+   * Repoint the live updater at the ForkHub catalog feed. Fork builds
+   * carry `-fh.<owner>.<n>`; the feed contains ONLY fork builds, so no
+   * stock prerelease can leak in and stock↔fork pairs stay refused by the
+   * version gate. Upstream has no `.forkhub` repo, so a stock build's
+   * feed can never serve a fork build.
+   */
+  applyForkHubFeed(): void {
+    const feed = getUpdateFeed(this.feedReader)
+    if (typeof this.updater.setFeedURL === 'function') {
+      this.updater.setFeedURL({ provider: 'github', owner: feed.owner, repo: feed.repo })
+    }
+    this.updater.allowPrerelease = true
+  }
 
   /** Revision captured by confirmations so channel changes invalidate old user actions. */
   get revision(): number { return this.generation }
@@ -276,7 +298,15 @@ export class DesktopUpdateCoordinator {
       this.cancellation = result.cancellationToken
       const version = result.updateInfo.version
       if (valid(version) === null) throw new Error('desktop update: feed version is invalid')
-      this.release = result.isUpdateAvailable && gt(version, this.currentVersion())
+      // ForkHub rebuild gate: a `-fh.<owner>.<n>` fork build installs only
+      // over a same-owner, lower-counter build; stock↔fork and cross-owner
+      // pairs refuse (the feed holds only fork builds, but the gate is the
+      // enforcement point, not feed trust). Stock pairs use semver.
+      const current = this.currentVersion()
+      const forkUpgrade = isForkCounterUpgrade(current, version)
+      const stockUpgrade = parseForkVersion(current) === null
+        && parseForkVersion(version) === null && gt(version, current)
+      this.release = result.isUpdateAvailable && (forkUpgrade || stockUpgrade)
         ? { kind: 'checked', version } : { kind: 'none' }
       return this.setState(this.candidate === undefined ? { phase: 'idle' } : { phase: 'available', version })
     } catch (error) {

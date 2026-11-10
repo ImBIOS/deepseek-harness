@@ -37,6 +37,8 @@ import { DesktopUpdateBadge } from './DesktopUpdateIndicator.tsx'
 import type { DesktopUpdateBridge } from '../types.ts'
 import { DesktopChannelSource } from './desktop-channel-source.ts'
 import { DesktopChannelRow, DesktopChannelToast } from './DesktopChannelRow.tsx'
+import { DesktopFeedSource } from './desktop-feed-source.ts'
+import { DesktopFeedRow } from './DesktopFeedRow.tsx'
 import { DesktopUpdateSource } from './desktop-update-source.ts'
 import { CloseLabel, HeaderContent, TriggerContent } from './chrome.tsx'
 import { GeneralSection } from './GeneralSection.tsx'
@@ -114,6 +116,16 @@ export function apply(ctx: ClientContext): void {
       name: 'settings.general.item', id: 'desktop-update-channel', order: 95, locale: NS,
       inject: () => ({ hooks: { channel: channel.store }, select: (value: 'nightly' | 'stable') => channel.select(value) }),
     }, DesktopChannelRow))
+    const feedBridge = carrier?.protocolVersion === 1 ? carrier.updates?.feed : undefined
+    if (feedBridge !== undefined) {
+      const feed = new DesktopFeedSource(feedBridge)
+      ctx.slots.inject('settings.general.item', () => ctx.slots.register({
+        name: 'settings.general.item', id: 'desktop-update-feed', order: 94, locale: NS,
+        inject: () => ({ hooks: { feed: feed.store },
+          edit: (input: string) => { feed.edit(input) }, check: () => feed.check(),
+          dismiss: (sequence: number) => { feed.dismissNotice(sequence) } }),
+      }, DesktopFeedRow))
+    }
     ctx.slots.inject('shell.overlay', () => ctx.slots.register({
       name: 'shell.overlay', id: 'desktop-channel-toast', locale: NS,
       inject: () => ({ hooks: { channel: channel.store },

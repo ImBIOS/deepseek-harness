@@ -112,6 +112,9 @@ export function createElectronBuilderConfig(
     extraMetadata: {
       dshDesktopAppId: appId,
       dshDesktopUpdateChannel: update?.channel ?? 'nightly',
+      // ForkHub catalogs stamp their owner at package time (with-fh ships
+      // unstamped so its default stays with-fh/.forkhub). Baked default only.
+      ...(process.env.DSH_UPDATE_OWNER?.trim() ? { forkhubUpdateOwner: process.env.DSH_UPDATE_OWNER.trim() } : {}),
       ...(policy === undefined ? {} : { dshMandatoryUpdatePolicy: policy }),
       ...buildVersion === productVersion ? {} : { version: buildVersion },
       ...packaged === undefined ? {} : { dshBuildCommit: packaged.commit, dshBuildDirty: packaged.dirty },

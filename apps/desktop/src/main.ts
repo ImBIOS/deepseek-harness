@@ -2,12 +2,14 @@
 
 import { installFileActions } from './file-actions.ts'
 import { configurationFailure, channelSaveFailure, configurationMessage } from './update-configuration.ts'
-import type { DesktopChannelState, DesktopChannelChangeResult } from '@deepseek-ai/dsh-client-ui-settings-general/types'
+import type { DesktopChannelState, DesktopChannelChangeResult, DesktopFeedState, DesktopFeedChangeResult } from '@deepseek-ai/dsh-client-ui-settings-general/types'
+import { bakedUpdateDefaultFromManifest, checkPublisherCatalog, FORKHUB_PUBLISHER_FILE, getUpdateFeed, normalizeUpdateOwner } from './updateFeed.ts'
 import { DesktopUpdateSettings } from './update-settings.ts'
 import { isDesktopUpdateChannel } from './settings-file.ts'
 import type { ProductEventMap, ProductEvent } from '@deepseek-ai/dsh-client-product-analytics/types'
 import { WINDOWS_TITLEBAR_HEIGHT } from './windows-layout.ts'
 import { access, readFile, writeFile } from 'node:fs/promises'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
@@ -693,6 +695,19 @@ async function main(): Promise<void> {
     packagedChannel, changing: false,
     ...(initialChannel.kind === 'error' ? { error: configurationFailure(initialChannel.error) } : {}) }
   const updateChannel = initialChannel.kind === 'ready' ? initialChannel.channel : packagedChannel
+  const publisherFile = join(app.getPath('userData'), FORKHUB_PUBLISHER_FILE)
+  const feedReader = {
+    persistedOwner: (): string | null => {
+      try {
+        const raw = readFileSync(publisherFile, 'utf8')
+        return normalizeUpdateOwner((JSON.parse(raw) as { owner?: unknown }).owner ?? null)
+      } catch {
+        return null
+      }
+    },
+    envOwner: () => normalizeUpdateOwner(process.env.DSH_UPDATE_OWNER ?? null),
+    bakedDefault: () => bakedUpdateDefaultFromManifest(manifest),
+  }
   const updates = new DesktopUpdateCoordinator(
     publishUpdate,
     async () => {
@@ -751,6 +766,8 @@ async function main(): Promise<void> {
     undefined, undefined, undefined,
     (success, reason) => { void track('desktop_upgrade_download_result', { is_success: success, ...reason === undefined ? {} : { error_reason: reason } }) },
     updateChannel,
+    undefined,
+    feedReader,
   )
 
   if (initialChannel.kind === 'error') updates.suspendConfiguration(initialChannel.error.path)
@@ -922,6 +939,26 @@ async function main(): Promise<void> {
         ...(updates.configurationFailure === 'cleanup' ? { error: 'cleanup' as const } : {}) })
       return { kind: 'failed', state, reason: channelSaveFailure(error) }
     }
+  })
+  ipcMain.handle(DESKTOP_IPC.updatesFeedGet, () => {
+    const feed = getUpdateFeed(feedReader)
+    return { owner: feed.owner, repo: feed.repo } satisfies DesktopFeedState
+  })
+  ipcMain.handle(DESKTOP_IPC.updatesFeedSet, async (event, owner: unknown): Promise<DesktopFeedChangeResult> => {
+    assertProductSender(event)
+    const before = getUpdateFeed(feedReader)
+    const checked = await checkPublisherCatalog(typeof owner === 'string' ? owner : '')
+    if (!checked.ok) {
+      return { kind: 'failed', state: { owner: before.owner, repo: before.repo }, message: checked.message }
+    }
+    // Persist only on validation success; upstream has no .forkhub repo so it
+    // can never validate as a publisher. Nothing persists on failure.
+    writeFileSync(publisherFile, `${JSON.stringify({ owner: checked.owner })}\n`, { mode: 0o600 })
+    updates.applyForkHubFeed()
+    const after = getUpdateFeed(feedReader)
+    const state: DesktopFeedState = { owner: after.owner, repo: after.repo, releases: checked.releases }
+    void updates.check(true).catch((error: unknown) => { console.error('desktop update: feed check failed', error) })
+    return { kind: 'applied', state, releases: checked.releases, message: checked.message }
   })
   ipcMain.handle(DESKTOP_IPC.updatesStatus, (event) => {
     assertProductSender(event)
